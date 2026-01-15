@@ -9,14 +9,14 @@ import {
   readdirSync,
   statSync,
   readFileSync,
+  writeFileSync,
 } from "node:fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Get the package root directory (where package.json is)
-// When installed via npm, setup.js will be in the package root directory
-// Check if package.json exists in the same directory as setup.js
+// When installed via npm, setup.js will be in node_modules/node-starter-app/
 let packageRoot = __dirname;
 const packageJsonPath = join(__dirname, "package.json");
 
@@ -32,8 +32,27 @@ if (existsSync(packageJsonPath)) {
     packageRoot = __dirname;
   }
 }
-// Get the current working directory where the user wants to create the app
-const targetDir = process.cwd();
+
+// Get the target directory where files should be copied
+// If we're in node_modules, copy to the project root (parent of node_modules)
+// Otherwise, copy to current working directory
+let targetDir = process.cwd();
+
+// Check if we're running from within node_modules
+if (__dirname.includes("node_modules")) {
+  // Go up directories until we're out of node_modules
+  // This gives us the project root where npm install was run
+  let checkDir = __dirname;
+  while (checkDir.includes("node_modules")) {
+    const parentDir = dirname(checkDir);
+    // Stop if we've reached the filesystem root
+    if (parentDir === checkDir) {
+      break;
+    }
+    checkDir = parentDir;
+  }
+  targetDir = checkDir;
+}
 
 // Files and directories to copy
 const filesToCopy = ["src", "package.json", "README.md"];
@@ -130,10 +149,43 @@ function setup() {
     const srcPath = join(packageRoot, item);
     const destPath = join(targetDir, item);
 
-    if (existsSync(srcPath)) {
-      copyRecursive(srcPath, destPath);
-    } else {
+    if (!existsSync(srcPath)) {
       console.log(`⚠️  Warning: ${item} not found in package`);
+      continue;
+    }
+
+    // Handle package.json specially - create a clean version without setup scripts
+    if (item === "package.json") {
+      try {
+        const packageJson = JSON.parse(readFileSync(srcPath, "utf-8"));
+        // Create a clean version without bin and postinstall
+        const cleanPackageJson = { ...packageJson };
+        delete cleanPackageJson.bin;
+        delete cleanPackageJson.postinstall;
+        // Update name to be more generic or let user customize
+        // Keep the original name for now, user can change it
+
+        // Only copy if destination doesn't exist
+        if (!existsSync(destPath)) {
+          const cleanJsonString =
+            JSON.stringify(cleanPackageJson, null, 2) + "\n";
+          writeFileSync(destPath, cleanJsonString, "utf-8");
+          console.log(`✓ Copied: ${item} (cleaned)`);
+        } else {
+          console.log(`⊘ Skipped (exists): ${item}`);
+        }
+      } catch (e) {
+        // If we can't parse package.json, fall back to regular copy
+        if (!existsSync(destPath)) {
+          copyFileSync(srcPath, destPath);
+          console.log(`✓ Copied: ${item}`);
+        } else {
+          console.log(`⊘ Skipped (exists): ${item}`);
+        }
+      }
+    } else {
+      // Regular file/directory copy
+      copyRecursive(srcPath, destPath);
     }
   }
 
