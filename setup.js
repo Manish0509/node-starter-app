@@ -8,14 +8,31 @@ import {
   copyFileSync,
   readdirSync,
   statSync,
+  readFileSync,
 } from "node:fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Get the package root directory (where package.json is)
-const packageRoot = __dirname;
-// Get the current working directory where the package is being installed
+// When installed via npm, setup.js will be in the package root directory
+// Check if package.json exists in the same directory as setup.js
+let packageRoot = __dirname;
+const packageJsonPath = join(__dirname, "package.json");
+
+if (existsSync(packageJsonPath)) {
+  try {
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+    // Verify this is our package
+    if (packageJson.name === "node-starter-app") {
+      packageRoot = __dirname;
+    }
+  } catch (e) {
+    // If we can't read package.json, use __dirname as fallback
+    packageRoot = __dirname;
+  }
+}
+// Get the current working directory where the user wants to create the app
 const targetDir = process.cwd();
 
 // Files and directories to copy
@@ -81,15 +98,33 @@ function copyRecursive(src, dest) {
 }
 
 function setup() {
-  console.log("\n🚀 Setting up booking-app-nodejs...\n");
-  console.log(`Package root: ${packageRoot}`);
-  console.log(`Target directory: ${targetDir}\n`);
+  console.log("\n🚀 Creating Node.js Starter App...\n");
+  console.log(`📦 Source: ${packageRoot}`);
+  console.log(`📁 Destination: ${targetDir}\n`);
 
   // Don't copy if we're in the package's own directory
   if (packageRoot === targetDir) {
-    console.log("⚠️  Skipping setup: Running in package directory itself.\n");
+    console.log(
+      "⚠️  Skipping: Cannot setup in the package directory itself.\n"
+    );
+    console.log("💡 Tip: Run this command in a new empty directory.\n");
     return;
   }
+
+  // Check if directory is empty (optional warning)
+  try {
+    const existingFiles = readdirSync(targetDir).filter(
+      (file) => !file.startsWith(".")
+    );
+    if (existingFiles.length > 0) {
+      console.log("⚠️  Warning: Target directory is not empty.");
+      console.log("   Existing files will be preserved.\n");
+    }
+  } catch (e) {
+    // Directory might not exist or be inaccessible, continue anyway
+  }
+
+  console.log("📋 Copying files...\n");
 
   for (const item of filesToCopy) {
     const srcPath = join(packageRoot, item);
@@ -102,11 +137,12 @@ function setup() {
     }
   }
 
-  console.log("\n✅ Setup complete!");
+  console.log("\n✅ Node.js Starter App created successfully!");
   console.log("\n📝 Next steps:");
-  console.log("   1. Run: npm install");
+  console.log("   1. Install dependencies: npm install");
   console.log("   2. Create a .env file with your configuration");
-  console.log("   3. Run: npm start\n");
+  console.log("   3. Start the app: npm start");
+  console.log("   4. Or run in dev mode: npm run dev\n");
 }
 
 setup();
