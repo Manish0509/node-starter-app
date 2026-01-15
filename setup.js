@@ -154,23 +154,38 @@ function setup() {
       continue;
     }
 
-    // Handle package.json specially - create a clean version without setup scripts
+    // Handle package.json specially - create a clean version for the starter app
     if (item === "package.json") {
       try {
         const packageJson = JSON.parse(readFileSync(srcPath, "utf-8"));
-        // Create a clean version without bin and postinstall
-        const cleanPackageJson = { ...packageJson };
-        delete cleanPackageJson.bin;
-        delete cleanPackageJson.postinstall;
-        // Update name to be more generic or let user customize
-        // Keep the original name for now, user can change it
+        // Create a clean starter app package.json
+        const cleanPackageJson = {
+          name: "my-node-app", // Generic name, user can change
+          version: "1.0.0",
+          description: packageJson.description || "A NodeJS application",
+          type: packageJson.type || "module",
+          main: packageJson.main || "src/app.js",
+          scripts: {
+            start: packageJson.scripts?.start || "node src/app.js",
+            dev: packageJson.scripts?.dev || "nodemon src/app.js",
+            test:
+              packageJson.scripts?.test ||
+              'echo "Error: no test specified" && exit 1',
+          },
+          dependencies: packageJson.dependencies || {},
+          devDependencies: packageJson.devDependencies || {},
+          keywords: packageJson.keywords || [],
+          author: "",
+          license: packageJson.license || "ISC",
+          engines: packageJson.engines || {},
+        };
 
         // Only copy if destination doesn't exist
         if (!existsSync(destPath)) {
           const cleanJsonString =
             JSON.stringify(cleanPackageJson, null, 2) + "\n";
           writeFileSync(destPath, cleanJsonString, "utf-8");
-          console.log(`✓ Copied: ${item} (cleaned)`);
+          console.log(`✓ Copied: ${item} (with all dependencies)`);
         } else {
           console.log(`⊘ Skipped (exists): ${item}`);
         }

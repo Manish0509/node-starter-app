@@ -1,6 +1,6 @@
 {
   "name": "node-starter-app",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A NodeJS application with Express, Sequelize, and MySQL",
   "license": "ISC",
   "author": "Manish",
