@@ -26,13 +26,19 @@
     "node": ">=14.0.0",
     "npm": ">=6.0.0"
   },
+  "bin": {
+    "booking-app-setup": "./setup.js"
+  },
   "files": [
-    "src/"
+    "src/",
+    "setup.js",
+    "README.md"
   ],
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node setup.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
